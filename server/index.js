@@ -37,11 +37,17 @@ app.use('/api/endpoints', endpointRoutes);
 app.use('/api/proxy', proxyRoutes);
 
 const PORT = process.env.PORT || 5000;
+
+// Bind HTTP immediately so the client is not refused while MongoDB is still connecting.
+// Mongoose buffers DB operations until the connection is ready (default behavior).
+app.listen(PORT, () => {
+  console.log(`SentinelAI server running on port ${PORT}`);
+});
+
 mongoose.connect(process.env.MONGO_URI)
   .then(() => {
     console.log('MongoDB connected');
-    app.listen(PORT, () => {
-      console.log(`SentinelAI server running on port ${PORT}`);
-    });
   })
-  .catch((err) => console.error('Database connection error:', err));
+  .catch((err) => {
+    console.error('Database connection error:', err);
+  });

@@ -1,35 +1,43 @@
 import { Link } from 'react-router-dom';
+import pkg from '../../package.json';
+
+const nodeUrl = import.meta.env.VITE_ALGORAND_NODE || '';
+const isTestnet = /testnet/i.test(nodeUrl);
 
 export default function StitchFooter() {
+  const networkLabel = isTestnet ? 'Testnet active' : 'Mainnet active';
+  const explorerUrl = isTestnet
+    ? 'https://testnet.explorer.algorand.org'
+    : 'https://explorer.algorand.org';
+
   return (
-    <footer className="bg-surface border-t border-surface-variant py-12 px-8 mt-auto">
-      <div className="max-w-screen-2xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
-        <div className="flex flex-col gap-2">
-          <span className="text-lg font-semibold text-primary tracking-tighter font-headline">Sentinal</span>
-          <p className="text-[11px] text-on-surface-variant font-medium tracking-wide uppercase">
-            © {new Date().getFullYear()} Sentinal infrastructure
-          </p>
+    <footer className="mt-auto py-8 w-full max-w-4xl mx-auto px-6 border-t border-outline-variant/5 flex flex-col md:flex-row justify-between items-center text-on-surface-variant">
+      <div className="flex items-center gap-6 mb-4 md:mb-0">
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-secondary shrink-0" aria-hidden />
+          <span className="text-[0.65rem] font-bold tracking-widest uppercase font-label">
+            {networkLabel}
+          </span>
         </div>
-        <div className="flex flex-wrap gap-8">
-          <Link
-            to="/how-it-works"
-            className="text-[13px] text-on-surface-variant hover:text-primary font-medium transition-colors"
-          >
-            How it works
-          </Link>
-          <a
-            href="https://github.com"
-            className="text-[13px] text-on-surface-variant hover:text-primary font-medium transition-colors"
-          >
-            Documentation
-          </a>
-          <Link
-            to="/marketplace"
-            className="text-[13px] text-on-surface-variant hover:text-primary font-medium transition-colors"
-          >
-            Marketplace
-          </Link>
+        <div className="text-[0.65rem] font-bold tracking-widest uppercase font-label">
+          v{pkg.version}
         </div>
+      </div>
+      <div className="flex items-center gap-8">
+        <Link
+          to="/about"
+          className="text-[0.65rem] font-bold tracking-widest uppercase font-label hover:text-primary transition-colors"
+        >
+          Privacy protocol
+        </Link>
+        <a
+          href={explorerUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[0.65rem] font-bold tracking-widest uppercase font-label hover:text-primary transition-colors"
+        >
+          Ledger status
+        </a>
       </div>
     </footer>
   );

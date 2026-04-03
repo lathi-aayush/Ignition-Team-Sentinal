@@ -1,96 +1,218 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Terminal, ShoppingBag } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { useWallet } from '../hooks/useWallet';
+import { useAuth } from '../hooks/useAuth';
 
 export default function Connect() {
+  const { walletAddress, connectWallet } = useWallet();
+  const { login, token, role } = useAuth();
   const navigate = useNavigate();
-  const [hover, setHover] = useState(null);
+  const [searchParams] = useSearchParams();
+  const roleFromQuery = searchParams.get('role');
 
-  const goLogin = (role) => {
-    navigate(`/login?role=${role}`);
+  const [selectedRole, setSelectedRole] = useState(() =>
+    roleFromQuery === 'developer' ? 'developer' : 'user'
+  );
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    const r = searchParams.get('role');
+    if (r === 'developer') setSelectedRole('developer');
+    if (r === 'user') setSelectedRole('user');
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (token) {
+      navigate(role === 'developer' ? '/dashboard' : '/user-dashboard');
+    }
+  }, [token, role, navigate]);
+
+  const handleConnectAndLogin = async () => {
+    setBusy(true);
+    try {
+      let address = walletAddress;
+      if (!address) {
+        address = await connectWallet();
+        if (!address) {
+          return;
+        }
+      }
+      const success = await login(selectedRole);
+      if (success) {
+        navigate(selectedRole === 'developer' ? '/dashboard' : '/user-dashboard');
+      }
+    } finally {
+      setBusy(false);
+    }
   };
 
-  const dim = (side) => hover && hover !== side;
+  const handleCancel = () => {
+    setBusy(false);
+  };
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] flex flex-col items-center justify-center px-6 py-16 bg-surface">
-      <div className="max-w-2xl w-full text-center mb-12">
-        <span className="font-sans text-[11px] font-bold tracking-[0.1em] text-secondary uppercase">
-          Choose your path
-        </span>
-        <h1 className="font-headline text-[32px] md:text-[40px] font-semibold text-primary leading-tight mt-3">
-          Two wallets. One ledger.
-        </h1>
-        <p className="text-on-surface-variant text-[15px] mt-2 max-w-md mx-auto">
-          Hover a card to focus it — then connect with Pera to continue. Creators monetize APIs; users pay per request.
+    <div className="relative min-h-[calc(100vh-4rem)] flex flex-col items-center justify-center px-6 py-12">
+      {/* Tonal background — Stitch / screen.png */}
+      <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-[120px]" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[30%] h-[30%] bg-secondary/10 rounded-full blur-[100px]" />
+      </div>
+
+      <main className="relative z-10 w-full flex flex-col items-center">
+        <header className="mb-10 md:mb-12">
+          <h1 className="text-3xl font-extrabold tracking-tighter font-headline text-primary uppercase text-center">
+            Sentinal
+          </h1>
+        </header>
+
+        <div className="w-full max-w-[400px] flex flex-col gap-8">
+          <section className="bg-surface-container-lowest rounded-xl p-8 shadow-[0_20px_40px_rgba(3,22,52,0.04)] border border-outline-variant/10">
+            <div className="mb-8">
+              <h2 className="text-xl font-bold font-headline text-on-surface mb-2 tracking-tight">
+                Connect Your Wallet
+              </h2>
+              <p className="text-sm text-on-surface-variant leading-relaxed">
+                Choose a role and connect your Pera Wallet to continue.
+              </p>
+            </div>
+
+            <div className="space-y-4 mb-8">
+              <button
+                type="button"
+                onClick={() => setSelectedRole('developer')}
+                className={[
+                  'w-full flex items-center p-4 rounded-xl border-2 transition-all duration-200 text-left group',
+                  selectedRole === 'developer'
+                    ? 'border-primary bg-surface-container-low'
+                    : 'border-outline-variant/30 bg-surface-container-lowest hover:bg-surface-container-low',
+                ].join(' ')}
+              >
+                <div
+                  className={[
+                    'w-10 h-10 rounded-lg flex items-center justify-center mr-4 shadow-sm shrink-0',
+                    selectedRole === 'developer'
+                      ? 'bg-primary text-on-primary'
+                      : 'bg-surface-container-highest text-on-surface-variant',
+                  ].join(' ')}
+                >
+                  <span className="material-symbols-outlined text-[20px]">terminal</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p
+                    className={[
+                      'font-bold leading-none mb-1',
+                      selectedRole === 'developer' ? 'text-on-surface' : 'text-on-surface-variant',
+                    ].join(' ')}
+                  >
+                    Continue as Creator
+                  </p>
+                  <p className="text-xs text-on-surface-variant">Deploy and manage API infrastructures</p>
+                </div>
+                <div
+                  className={[
+                    'h-5 w-5 rounded-full shrink-0',
+                    selectedRole === 'developer'
+                      ? 'border-4 border-primary bg-white'
+                      : 'border border-outline-variant/30',
+                  ].join(' ')}
+                  aria-hidden
+                />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSelectedRole('user')}
+                className={[
+                  'w-full flex items-center p-4 rounded-xl border-2 transition-all duration-200 text-left group',
+                  selectedRole === 'user'
+                    ? 'border-primary bg-surface-container-low'
+                    : 'border-outline-variant/30 bg-surface-container-lowest hover:bg-surface-container-low',
+                ].join(' ')}
+              >
+                <div
+                  className={[
+                    'w-10 h-10 rounded-lg flex items-center justify-center mr-4 shrink-0',
+                    selectedRole === 'user'
+                      ? 'bg-primary text-on-primary shadow-sm'
+                      : 'bg-surface-container-highest text-on-surface-variant',
+                  ].join(' ')}
+                >
+                  <span className="material-symbols-outlined text-[20px]">grid_view</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p
+                    className={[
+                      'font-bold leading-none mb-1',
+                      selectedRole === 'user' ? 'text-on-surface' : 'text-on-surface-variant',
+                    ].join(' ')}
+                  >
+                    Continue as User
+                  </p>
+                  <p className="text-xs text-on-surface-variant">Access marketplace and API services</p>
+                </div>
+                <div
+                  className={[
+                    'h-5 w-5 rounded-full shrink-0',
+                    selectedRole === 'user'
+                      ? 'border-4 border-primary bg-white'
+                      : 'border border-outline-variant/30',
+                  ].join(' ')}
+                  aria-hidden
+                />
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleConnectAndLogin}
+              disabled={busy}
+              className="w-full bg-primary text-on-primary h-14 rounded-xl font-bold flex items-center justify-center gap-3 transition-all active:scale-[0.98] hover:bg-primary/95 shadow-lg shadow-primary/10 disabled:opacity-60 disabled:pointer-events-none"
+            >
+              <span className="material-symbols-outlined text-[24px]">account_balance_wallet</span>
+              <span>{walletAddress && !busy ? 'Sign in with Pera' : 'Connect with Pera Wallet'}</span>
+            </button>
+
+            <p className="mt-6 text-center text-[11px] text-on-surface-variant font-medium tracking-wide uppercase">
+              New to Algorand?{' '}
+              <a
+                className="text-primary hover:underline underline-offset-4 ml-1"
+                href="https://perawallet.app"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Get Pera Wallet
+              </a>
+            </p>
+          </section>
+
+          {busy && (
+            <div className="bg-surface-container-high/50 backdrop-blur-md rounded-xl px-6 py-4 border border-outline-variant/10 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-4 min-w-0">
+                <div
+                  className="size-5 shrink-0 border-2 border-outline-variant border-t-primary rounded-full animate-spin"
+                  aria-hidden
+                />
+                <p className="text-sm font-medium text-on-surface truncate">
+                  Connecting to Pera Wallet…
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleCancel}
+                className="text-xs font-bold text-primary hover:bg-primary/5 px-3 py-1.5 rounded-lg transition-colors shrink-0"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
+        </div>
+
+        <p className="relative z-10 mt-10 text-center text-sm text-on-surface-variant">
+          <Link to="/" className="text-primary font-medium hover:underline">
+            ← Back to home
+          </Link>
         </p>
-      </div>
-
-      <div className="flex flex-col md:flex-row gap-6 w-full max-w-[680px]">
-        <button
-          type="button"
-          onClick={() => goLogin('developer')}
-          onMouseEnter={() => setHover('creator')}
-          onMouseLeave={() => setHover(null)}
-          className={[
-            'flex-1 text-left bg-surface-container-lowest border border-surface-variant p-8 rounded-[6px] transition-all duration-200 cursor-pointer group',
-            dim('creator') ? 'opacity-35 scale-[0.99]' : 'opacity-100',
-            'hover:bg-surface-container-low hover:shadow-[0_20px_40px_rgba(3,22,52,0.06)]',
-          ].join(' ')}
-        >
-          <div className="flex flex-col gap-6">
-            <div className="flex justify-between items-start">
-              <span className="font-sans text-[11px] font-bold tracking-wider text-secondary uppercase">Creator</span>
-              <Terminal className="w-6 h-6 text-primary" strokeWidth={1.5} />
-            </div>
-            <div className="flex flex-col gap-2">
-              <h3 className="font-headline text-lg font-semibold text-primary">Deploy &amp; earn</h3>
-              <p className="font-sans text-[13px] leading-relaxed text-on-surface-variant">
-                Publish AI endpoints on the marketplace. Set pricing. Track earnings per request.
-              </p>
-            </div>
-            <div className="flex items-center gap-2 text-primary font-semibold text-sm">
-              <span className="material-symbols-outlined text-lg group-hover:translate-x-1 transition-transform">
-                arrow_forward
-              </span>
-            </div>
-          </div>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => goLogin('user')}
-          onMouseEnter={() => setHover('user')}
-          onMouseLeave={() => setHover(null)}
-          className={[
-            'flex-1 text-left bg-surface-container-lowest border border-surface-variant p-8 rounded-[6px] transition-all duration-200 cursor-pointer group',
-            dim('user') ? 'opacity-35 scale-[0.99]' : 'opacity-100',
-            'hover:bg-surface-container-low hover:shadow-[0_20px_40px_rgba(3,22,52,0.06)]',
-          ].join(' ')}
-        >
-          <div className="flex flex-col gap-6">
-            <div className="flex justify-between items-start">
-              <span className="font-sans text-[11px] font-bold tracking-wider text-secondary uppercase">User</span>
-              <ShoppingBag className="w-6 h-6 text-primary" strokeWidth={1.5} />
-            </div>
-            <div className="flex flex-col gap-2">
-              <h3 className="font-headline text-lg font-semibold text-primary">Access &amp; pay</h3>
-              <p className="font-sans text-[13px] leading-relaxed text-on-surface-variant">
-                Browse APIs, mint keys, and use them in any project. Balance deducts per call.
-              </p>
-            </div>
-            <div className="flex items-center gap-2 text-primary font-semibold text-sm">
-              <span className="material-symbols-outlined text-lg group-hover:translate-x-1 transition-transform">
-                arrow_forward
-              </span>
-            </div>
-          </div>
-        </button>
-      </div>
-
-      <p className="mt-10 font-sans text-[12px] text-on-surface-variant/70 italic">
-        Both flows use Pera Wallet on Algorand. Testnet demo supported.
-      </p>
+      </main>
     </div>
   );
 }

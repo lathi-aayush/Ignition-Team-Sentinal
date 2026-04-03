@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&amp;family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&amp;family=Inter:wght@400;500;600;700&amp;family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-tint": "#4e5e80",
+                        "surface-container-lowest": "#ffffff",
+                        "on-secondary": "#ffffff",
+                        "surface-variant": "#e2e2e2",
+                        "on-tertiary-container": "#af8d5b",
+                        "on-secondary-fixed-variant": "#005144",
+                        "inverse-primary": "#b6c6ee",
+                        "on-primary-fixed-variant": "#364767",
+                        "secondary-fixed-dim": "#4edcc1",
+                        "error": "#ba1a1a",
+                        "tertiary-fixed": "#ffddaf",
+                        "tertiary": "#221400",
+                        "surface": "#f9f9f9",
+                        "outline": "#75777e",
+                        "inverse-on-surface": "#f1f1f1",
+                        "surface-container": "#eeeeee",
+                        "on-tertiary-fixed-variant": "#5c4217",
+                        "on-primary": "#ffffff",
+                        "surface-dim": "#dadada",
+                        "tertiary-container": "#3d2700",
+                        "surface-container-highest": "#e2e2e2",
+                        "primary-fixed": "#d8e2ff",
+                        "inverse-surface": "#2f3131",
+                        "on-secondary-container": "#007261",
+                        "outline-variant": "#c5c6cf",
+                        "on-background": "#1a1c1c",
+                        "primary-container": "#1a2b4a",
+                        "on-error": "#ffffff",
+                        "on-surface-variant": "#44474e",
+                        "background": "#f9f9f9",
+                        "secondary-fixed": "#6ff9dc",
+                        "on-error-container": "#93000a",
+                        "on-secondary-fixed": "#00201a",
+                        "on-tertiary-fixed": "#281800",
+                        "on-surface": "#1a1c1c",
+                        "on-tertiary": "#ffffff",
+                        "surface-container-high": "#e8e8e8",
+                        "tertiary-fixed-dim": "#e7c18a",
+                        "primary-fixed-dim": "#b6c6ee",
+                        "error-container": "#ffdad6",
+                        "secondary": "#006b5b",
+                        "primary": "#031634",
+                        "surface-bright": "#f9f9f9",
+                        "surface-container-low": "#f3f3f3",
+                        "on-primary-fixed": "#081b39",
+                        "on-primary-container": "#8293b7",
+                        "secondary-container": "#6ff9dc"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "fontFamily": {
+                        "headline": ["Sora", "Manrope"],
+                        "body": ["DM Sans", "Inter"],
+                        "label": ["DM Sans", "Inter"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .loading-spinner {
+            border: 2px solid #e2e2e2;
+            border-top: 2px solid #031634;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-background font-body selection:bg-secondary-fixed selection:text-on-secondary-container">
+<!-- Subtle Tonal Background Pattern -->
+<div class="fixed inset-0 z-0 overflow-hidden pointer-events-none">
+<div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-[120px]"></div>
+<div class="absolute bottom-[-10%] right-[-10%] w-[30%] h-[30%] bg-secondary-fixed/10 rounded-full blur-[100px]"></div>
+</div>
+<main class="relative z-10 min-h-screen flex flex-col items-center justify-center p-6">
+<!-- Brand Wordmark -->
+<header class="mb-12">
+<h1 class="text-3xl font-extrabold tracking-tighter font-headline text-primary uppercase">
+                Sentinal
+            </h1>
+</header>
+<div class="w-full max-w-[400px] flex flex-col space-y-12">
+<!-- Connection Card -->
+<section class="bg-surface-container-lowest rounded-xl p-8 shadow-[0_20px_40px_rgba(3,22,52,0.04)] border border-outline-variant/10">
+<div class="mb-8">
+<h2 class="text-xl font-bold font-headline text-on-surface mb-2 tracking-tight">Connect Your Wallet</h2>
+<p class="text-body-md text-on-surface-variant leading-relaxed">Choose a role and connect your Pera Wallet to continue.</p>
+</div>
+<!-- Role Selectors -->
+<div class="space-y-4 mb-8">
+<!-- Selected Role: Creator -->
+<button class="w-full flex items-center p-4 rounded-xl border-2 border-primary bg-surface-container-low transition-all duration-200 text-left group">
+<div class="w-10 h-10 rounded-lg bg-primary flex items-center justify-center text-on-primary mr-4 shadow-sm">
+<span class="material-symbols-outlined text-[20px]">terminal</span>
+</div>
+<div class="flex-1">
+<p class="font-bold text-on-surface leading-none mb-1">Continue as Creator</p>
+<p class="text-xs text-on-surface-variant">Deploy and manage API infrastructures</p>
+</div>
+<div class="h-5 w-5 rounded-full border-4 border-primary bg-white"></div>
+</button>
+<!-- Inactive Role: User -->
+<button class="w-full flex items-center p-4 rounded-xl border border-outline-variant/30 bg-surface-container-lowest hover:bg-surface-container-low transition-all duration-200 text-left group">
+<div class="w-10 h-10 rounded-lg bg-surface-container-highest flex items-center justify-center text-on-surface-variant mr-4">
+<span class="material-symbols-outlined text-[20px]">grid_view</span>
+</div>
+<div class="flex-1">
+<p class="font-bold text-on-surface-variant leading-none mb-1">Continue as User</p>
+<p class="text-xs text-on-surface-variant">Access marketplace and data services</p>
+</div>
+<div class="h-5 w-5 rounded-full border border-outline-variant/30"></div>
+</button>
+</div>
+<!-- Action Button -->
+<button class="w-full bg-primary text-on-primary h-14 rounded-xl font-bold flex items-center justify-center space-x-3 transition-all active:scale-[0.98] hover:bg-primary/95 shadow-lg shadow-primary/10">
+<span class="material-symbols-outlined text-[24px]">account_balance_wallet</span>
+<span>Connect with Pera Wallet</span>
+</button>
+<!-- Helper Text -->
+<p class="mt-6 text-center text-label-sm text-on-surface-variant font-medium tracking-wide uppercase">
+                    New to Algorand? 
+                    <a class="text-primary hover:underline underline-offset-4 ml-1" href="https://perawallet.app">Get Pera Wallet</a>
+</p>
+</section>
+<!-- Connecting State Component -->
+<div class="bg-surface-container-high/50 backdrop-blur-md rounded-xl p-6 border border-outline-variant/10 flex items-center justify-between">
+<div class="flex items-center space-x-4">
+<div class="loading-spinner"></div>
+<p class="text-sm font-medium text-on-surface">Connecting to Pera Wallet...</p>
+</div>
+<button class="text-xs font-bold text-primary hover:bg-primary/5 px-3 py-1.5 rounded-lg transition-colors">
+                    CANCEL
+                </button>
+</div>
+</div>
+<!-- Footer / Technical Metadata -->
+<footer class="mt-auto py-8 w-full max-w-4xl border-t border-outline-variant/5 flex flex-col md:flex-row justify-between items-center text-on-surface-variant">
+<div class="flex items-center space-x-6 mb-4 md:mb-0">
+<div class="flex items-center space-x-2">
+<div class="w-2 h-2 rounded-full bg-secondary"></div>
+<span class="text-[0.65rem] font-bold tracking-widest uppercase font-label">Mainnet Active</span>
+</div>
+<div class="text-[0.65rem] font-bold tracking-widest uppercase font-label">v1.2.0-stable</div>
+</div>
+<div class="flex items-center space-x-8">
+<a class="text-[0.65rem] font-bold tracking-widest uppercase font-label hover:text-primary transition-colors" href="#">Privacy Protocol</a>
+<a class="text-[0.65rem] font-bold tracking-widest uppercase font-label hover:text-primary transition-colors" href="#">Ledger Status</a>
+</div>
+</footer>
+</main>
+</body></html>
