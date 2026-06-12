@@ -10,6 +10,7 @@ export default function WalletConnectModal({
   role = "user",
   onClose,
   onSelectWallet,
+  onConnectPera,
   busy = false,
 }) {
   const { wallets, isReady, activeWallet, activeAddress } = useWallet();
@@ -68,9 +69,35 @@ export default function WalletConnectModal({
         {!isReady ? (
           <div className="py-8 text-center text-sm text-slate-500">Loading wallets…</div>
         ) : wallets.length === 0 ? (
-          <div className="py-8 text-center text-sm text-slate-500">No wallets available.</div>
+          <div className="py-6 text-center space-y-3">
+            <p className="text-sm text-slate-500">Wallet list unavailable in this browser.</p>
+            {onConnectPera && (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => onConnectPera()}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-500 disabled:opacity-50"
+              >
+                Connect Pera Wallet
+              </button>
+            )}
+          </div>
         ) : (
           <div className="grid gap-2">
+            {onConnectPera && (
+              <button
+                type="button"
+                disabled={Boolean(connectingId) || busy}
+                onClick={() => onConnectPera()}
+                className="flex items-center gap-3 w-full px-4 py-3 rounded-lg border-2 border-indigo-200 bg-indigo-50 hover:bg-indigo-100 transition-colors disabled:opacity-50 text-left"
+              >
+                <span className="w-8 h-8 rounded-md bg-white flex items-center justify-center border border-indigo-100">
+                  <span className="material-symbols-outlined text-indigo-600 text-[18px]">account_balance_wallet</span>
+                </span>
+                <span className="flex-1 font-semibold text-indigo-900">Pera Wallet</span>
+                <span className="text-xs text-indigo-600 font-medium">Recommended</span>
+              </button>
+            )}
             {wallets.map((wallet) => {
               const key = wallet.walletKey || wallet.id;
               const isConnecting = connectingId === key;

@@ -1,6 +1,6 @@
 import { getWalletSigner } from "./walletSignerBridge.js";
 import { reconnectPera, connectPera, signData as peraSignData } from "./pera.js";
-import { normalizeAccountAddress } from "./addressUtils.js";
+import { normalizeAccountAddress, addressesEqual } from "./addressUtils.js";
 
 /** Set when user picks a wallet in the login modal (before bridge activeWallet updates). */
 let loginWalletId = "";
@@ -33,14 +33,14 @@ export async function syncPeraSessionForLogin(expectedAddress) {
   const expected = normalizeAccountAddress(expectedAddress);
   const reconnected = normalizeAccountAddress(await reconnectPera());
   if (reconnected) {
-    if (!expected || reconnected === expected) return reconnected;
+    if (!expected || (await addressesEqual(reconnected, expected))) return reconnected;
   }
 
   const connected = normalizeAccountAddress(await connectPera());
   if (!connected) {
     throw new Error("Could not connect Pera Wallet for sign-in.");
   }
-  if (expected && connected !== expected) {
+  if (expected && !(await addressesEqual(connected, expected))) {
     throw new Error(
       `Pera account mismatch. Expected ${expected.slice(0, 6)}…${expected.slice(-4)}, got ${connected.slice(0, 6)}…${connected.slice(-4)}.`
     );
@@ -54,10 +54,11 @@ export async function syncPeraSessionForLogin(expectedAddress) {
  */
 export async function signLoginChallenge(messageBytes, walletAddress) {
   const bridge = getWalletSigner();
+  const expected = normalizeAccountAddress(walletAddress);
 
-  if (isPeraWalletUser(bridge)) {
-    await syncPeraSessionForLogin(walletAddress);
-    return peraSignData(messageBytes, walletAddress);
+  if (isPeraWalletUser(bridge) || getLoginWalletId().includes("pera")) {
+    await syncPeraSessionForLogin(expected);
+    return peraSignData(messageBytes, expected);
   }
 
   if (typeof bridge?.signMessage === "function") {

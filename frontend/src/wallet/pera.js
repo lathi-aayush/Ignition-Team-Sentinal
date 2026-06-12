@@ -109,10 +109,20 @@ export async function signData(dataBytes, address) {
     throw new Error("No signer address found. Connect Pera Wallet first.");
   }
 
-  return await peraWallet.signData([{ data: dataBytes, message: "Sign in to SentinelAI" }], signer);
+  try {
+    return await peraWallet.signData(
+      [{ data: dataBytes, message: "Sign in to SentinelAI" }],
+      signer
+    );
+  } catch (err) {
+    const msg = String(err?.message || err || "Unknown error");
+    if (/reject|cancel|denied|closed/i.test(msg)) {
+      throw new Error("Sign-in cancelled in Pera Wallet.");
+    }
+    throw new Error(`Pera Wallet could not sign: ${msg}`);
+  }
 }
 
-/** Ensure standalone Pera session matches the expected linked address. */
 async function ensurePeraSessionForPayment(expectedAddress) {
   const expected = normalizeAccountAddress(expectedAddress);
   const reconnected = normalizeAccountAddress(await reconnectPera());

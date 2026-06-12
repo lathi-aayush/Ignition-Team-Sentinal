@@ -7,20 +7,31 @@ import React, {
   useState,
 } from "react";
 import { useNavigate } from "react-router-dom";
-import { useWallet } from "@txnlab/use-wallet-react";
 import toast from "react-hot-toast";
 import { useAuth } from "./AuthContext.jsx";
 import PeraRegistrationModal from "../components/PeraRegistrationModal.jsx";
 import WalletConnectModal from "../components/WalletConnectModal.jsx";
-import { syncPeraSessionForLogin, setLoginWalletId } from "../wallet/signLoginChallenge.js";
+import { setLoginWalletId } from "../wallet/signLoginChallenge.js";
 import { connectPera } from "../wallet/pera.js";
 
 const WalletLoginContext = createContext(null);
 
+function isUserCancelError(err) {
+  const msg = String(err?.message || err || "").toLowerCase();
+  return /cancel|reject|denied|closed|user refused|aborted/.test(msg);
+}
+
+function formatConnectError(err) {
+  if (err?.response?.data?.error) return String(err.response.data.error);
+  if (err?.code === "ERR_NETWORK" || !err?.response) {
+    return "Cannot reach the server. Check your connection and try again.";
+  }
+  return err?.message || "Wallet login failed";
+}
+
 export function PeraLoginProvider({ children }) {
   const navigate = useNavigate();
   const { login, user, isAuthenticated } = useAuth();
-  const { activeWallet } = useWallet();
 
   const [busy, setBusy] = useState(false);
   const [showReg, setShowReg] = useState(false);
@@ -131,9 +142,7 @@ export function PeraLoginProvider({ children }) {
         return await completeLogin(addr, { role, afterLogin, shouldNavigate });
       } catch (e) {
         console.error(e);
-        toast.error(e?.response?.data?.error || e?.message || `${walletName} login failed`, {
-          id: "wallet-login",
-        });
+        toast.error(formatConnectError(e), { id: "wallet-login" });
         try {
           await wallet.disconnect();
         } catch {
@@ -164,7 +173,7 @@ export function PeraLoginProvider({ children }) {
     });
   }, []);
 
-  /** Backward-compatible: opens wallet picker instead of Pera-only. */
+  /** Connect via standalone Pera Wallet, then sign in. */
   const connectWithPera = useCallback(
     async (options = {}) => {
       const role = options.role || "user";
@@ -181,45 +190,45 @@ export function PeraLoginProvider({ children }) {
         }
       }
 
-      if (activeWallet?.isConnected && activeWallet.activeAccount?.address) {
-        setBusy(true);
-        try {
-          const walletKey = String(activeWallet.id || activeWallet.walletKey || "").toLowerCase();
-          setLoginWalletId(activeWallet.id || activeWallet.walletKey || "");
-          let addr = activeWallet.activeAccount.address;
-          if (walletKey.includes("pera")) {
-            addr = await syncPeraSessionForLogin(addr);
-          }
-          return await completeLogin(addr, {
-            role,
-            afterLogin,
-            shouldNavigate,
-          });
-        } catch (e) {
-          console.error(e);
-          toast.error(e?.response?.data?.error || e?.message || "Wallet login failed", {
-            id: "wallet-login",
-          });
-          return false;
-        } finally {
-          setBusy(false);
+      setBusy(true);
+      setShowWalletModal(false);
+      try {
+        toast.loading("Open Pera Wallet to connect…", { id: "wallet-login" });
+        setLoginWalletId("pera");
+        const addr = await connectPera();
+        return await completeLogin(addr, { role, afterLogin, shouldNavigate });
+      } catch (e) {
+        console.error(e);
+        if (!isUserCancelError(e)) {
+          toast.error(formatConnectError(e), { id: "wallet-login" });
+        } else {
+          toast.error("Wallet connection cancelled.", { id: "wallet-login" });
         }
+        resolveConnectPromise(false);
+        return false;
+      } finally {
+        setBusy(false);
       }
-
-      return openConnectModal(options);
     },
-    [activeWallet, completeLogin, isAuthenticated, user, navigate, openConnectModal]
+    [completeLogin, isAuthenticated, user, navigate, resolveConnectPromise]
+  );
+
+  /** Opens multi-wallet picker for Defly, Exodus, etc. */
+  const connectWithOtherWallets = useCallback(
+    (options = {}) => openConnectModal(options),
+    [openConnectModal]
   );
 
   const value = useMemo(
     () => ({
       connectWithPera,
       enterWithPera: connectWithPera,
+      connectWithOtherWallets,
       connectWithWallet,
       openConnectModal,
       busy,
     }),
-    [connectWithPera, connectWithWallet, openConnectModal, busy]
+    [connectWithPera, connectWithOtherWallets, connectWithWallet, openConnectModal, busy]
   );
 
   return (
@@ -234,6 +243,7 @@ export function PeraLoginProvider({ children }) {
           resolveConnectPromise(false);
         }}
         onSelectWallet={(wallet) => connectWithWallet(wallet, pendingConnect)}
+        onConnectPera={() => connectWithPera(pendingConnect)}
       />
       <PeraRegistrationModal
         open={showReg}
