@@ -1,10 +1,19 @@
 import { PeraWalletConnect } from "@perawallet/connect";
-import { normalizeAccountAddress } from "./addressUtils.js";
+import { normalizeAccountAddress, addressesEqual } from "./addressUtils.js";
 
 export { normalizeAccountAddress, addressesEqual } from "./addressUtils.js";
 
 const peraWallet = new PeraWalletConnect({ chainId: 416002 });
 let _connectedAddress = null;
+
+/** Pera returns Uint8Array[] (one entry per txn in the group). */
+function extractPeraSignedBytes(result) {
+  if (!Array.isArray(result) || !result.length) return null;
+  const first = result[0];
+  if (first instanceof Uint8Array) return first;
+  if (Array.isArray(first) && first[0] instanceof Uint8Array) return first[0];
+  return null;
+}
 
 export async function reconnectPera() {
   try {
@@ -103,6 +112,30 @@ export async function signData(dataBytes, address) {
   return await peraWallet.signData([{ data: dataBytes, message: "Sign in to SentinelAI" }], signer);
 }
 
+/** Ensure standalone Pera session matches the expected linked address. */
+async function ensurePeraSessionForPayment(expectedAddress) {
+  const expected = normalizeAccountAddress(expectedAddress);
+  const reconnected = normalizeAccountAddress(await reconnectPera());
+  if (reconnected) {
+    if (!expected || (await addressesEqual(reconnected, expected))) {
+      _connectedAddress = reconnected;
+      return reconnected;
+    }
+  }
+
+  const connected = normalizeAccountAddress(await connectPera());
+  if (!connected) {
+    throw new Error("Connect Pera Wallet to send ALGO.");
+  }
+  if (expected && !(await addressesEqual(connected, expected))) {
+    throw new Error(
+      `Pera account mismatch. Expected ${expected.slice(0, 6)}…${expected.slice(-4)}, got ${connected.slice(0, 6)}…${connected.slice(-4)}.`
+    );
+  }
+  _connectedAddress = connected;
+  return connected;
+}
+
 /**
  * Sign a payment txn via standalone Pera (for users who logged in without use-wallet active).
  * @returns {{ signedBytes: Uint8Array, txId: string }}
@@ -114,20 +147,17 @@ export async function peraSignPaymentTransaction({
   noteStr,
   algodServer,
 }) {
-  if (!peraWallet.isConnected) {
-    const reconnected = await reconnectPera();
-    if (!reconnected) await connectPera();
-  }
+  const sender = normalizeAccountAddress(from) ?? normalizeAccountAddress(_connectedAddress);
+  const resolvedSender = await ensurePeraSessionForPayment(sender);
   if (!peraWallet.isConnected) {
     throw new Error("Connect Pera Wallet to send ALGO.");
   }
 
   const algosdk = (await import("algosdk")).default;
   const server = String(algodServer || "").trim().replace(/\/$/, "");
-  const sender = normalizeAccountAddress(from) ?? normalizeAccountAddress(_connectedAddress);
   const receiver = normalizeAccountAddress(to);
 
-  if (!sender || !algosdk.isValidAddress(sender)) {
+  if (!resolvedSender || !algosdk.isValidAddress(resolvedSender)) {
     throw new Error("Invalid sender address.");
   }
   if (!receiver || !algosdk.isValidAddress(receiver)) {
@@ -144,15 +174,28 @@ export async function peraSignPaymentTransaction({
   const note = noteStr ? new TextEncoder().encode(noteStr) : undefined;
 
   const txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-    sender,
+    sender: resolvedSender,
     receiver,
     amount: amt,
     note,
     suggestedParams,
   });
 
-  const signedGroups = await peraWallet.signTransaction([[{ txn }]]);
-  const signedBytes = signedGroups?.[0]?.[0] ?? signedGroups?.[0];
+  let signedGroups;
+  try {
+    signedGroups = await peraWallet.signTransaction(
+      [[{ txn, signers: [resolvedSender] }]],
+      resolvedSender
+    );
+  } catch (err) {
+    const msg = String(err?.message || err || "Unknown error");
+    if (/reject|cancel|denied|closed/i.test(msg)) {
+      throw new Error("Payment cancelled in Pera Wallet.");
+    }
+    throw new Error(`Pera Wallet could not sign: ${msg}`);
+  }
+
+  const signedBytes = extractPeraSignedBytes(signedGroups);
   if (!signedBytes) {
     throw new Error("Pera Wallet did not return signed transaction bytes.");
   }

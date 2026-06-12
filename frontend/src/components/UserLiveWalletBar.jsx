@@ -103,6 +103,9 @@ export default function UserLiveWalletBar({ walletAddress, variant = "compact" }
     if (!burnerReady) return toast.error("Burner wallet is still loading — wait a moment and retry");
     const amountFloat = parseFloat(fundAmount);
     if (isNaN(amountFloat) || amountFloat <= 0) return toast.error("Enter an amount greater than 0 ALGO");
+    if (algo != null && amountFloat + 0.001 > Number(algo)) {
+      return toast.error(`Insufficient ALGO in Pera wallet (${Number(algo).toFixed(4)} available)`);
+    }
     setIsFunding(true);
     try {
       toast.loading("Approve the transfer in your wallet…", { id: "fund-burner" });

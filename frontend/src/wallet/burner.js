@@ -1,6 +1,12 @@
 import { addressesEqual, normalizeAccountAddress } from "./addressUtils.js";
 import { signAndSendPayment, ensureConnectedWallet } from "./signPayment.js";
 import { reconnectPera } from "./pera.js";
+import {
+  isPeraWalletUser,
+  syncPeraSessionForLogin,
+  getLoginWalletId,
+} from "./signLoginChallenge.js";
+import { getWalletSigner } from "./walletSignerBridge.js";
 import { api } from "../api/client.js";
 
 /** Lazy-load algosdk (~370 kB) — only when burner wallet is used. */
@@ -222,19 +228,38 @@ export async function getBurnerBalance(algodServer = getDefaultAlgodServer(), us
   }
 }
 
+async function resolveFundingPayer(linkedAddress) {
+  const linked = normalizeAccountAddress(linkedAddress);
+  const bridge = getWalletSigner();
+  const preferPera =
+    isPeraWalletUser(bridge) || getLoginWalletId().includes("pera");
+
+  if (preferPera && linked) {
+    return syncPeraSessionForLogin(linked);
+  }
+
+  try {
+    const connected = normalizeAccountAddress(await ensureConnectedWallet());
+    if (connected) return connected;
+  } catch {
+    if (linked) {
+      try {
+        return await syncPeraSessionForLogin(linked);
+      } catch {
+        /* fall through */
+      }
+    }
+    const reconnected = normalizeAccountAddress(await reconnectPera());
+    if (reconnected) return reconnected;
+  }
+
+  if (linked) return linked;
+  throw new Error("Connect your wallet to fund the burner.");
+}
+
 export async function fundBurnerWallet(linkedAddress, amountMicroAlgos, algodServer = getDefaultAlgodServer()) {
   const burner = getBurnerWallet();
-
-  let from = normalizeAccountAddress(linkedAddress);
-  try {
-    from = normalizeAccountAddress(await ensureConnectedWallet()) || from;
-  } catch {
-    from = normalizeAccountAddress(await reconnectPera()) || from;
-  }
-
-  if (!from) {
-    throw new Error("Connect your wallet to fund the burner.");
-  }
+  const from = await resolveFundingPayer(linkedAddress);
 
   if (linkedAddress && !(await addressesEqual(linkedAddress, from))) {
     throw new Error(

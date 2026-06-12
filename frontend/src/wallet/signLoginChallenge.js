@@ -13,7 +13,11 @@ function isPeraWalletId(id) {
   return String(id || "").toLowerCase().includes("pera");
 }
 
-function isPeraContext(bridge) {
+export function getLoginWalletId() {
+  return loginWalletId;
+}
+
+export function isPeraWalletUser(bridge) {
   const id = String(bridge?.getActiveWalletId?.() || loginWalletId || "").toLowerCase();
   const label = String(bridge?.getActiveWalletName?.() || "").toLowerCase();
   return isPeraWalletId(id) || label.includes("pera");
@@ -51,7 +55,7 @@ export async function syncPeraSessionForLogin(expectedAddress) {
 export async function signLoginChallenge(messageBytes, walletAddress) {
   const bridge = getWalletSigner();
 
-  if (isPeraContext(bridge)) {
+  if (isPeraWalletUser(bridge)) {
     await syncPeraSessionForLogin(walletAddress);
     return peraSignData(messageBytes, walletAddress);
   }

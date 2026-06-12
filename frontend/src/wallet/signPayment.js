@@ -1,6 +1,7 @@
 import { getWalletSigner } from "./walletSignerBridge.js";
 import { normalizeAccountAddress, addressesEqual } from "./addressUtils.js";
 import { getDefaultAlgodServer } from "../utils/algodConfig.js";
+import { isPeraWalletUser, syncPeraSessionForLogin } from "./signLoginChallenge.js";
 
 function defaultAlgodServer() {
   return getDefaultAlgodServer();
@@ -55,13 +56,23 @@ async function signTxnGroup(txns) {
 }
 
 function isPeraWalletContext(bridge) {
-  const id = String(bridge?.getActiveWalletId?.() || "").toLowerCase();
-  const name = String(bridge?.getActiveWalletName?.() || "").toLowerCase();
-  return id.includes("pera") || name.includes("pera");
+  return isPeraWalletUser(bridge);
+}
+
+async function signViaStandalonePera({ from, to, amountMicroAlgos, noteStr, algodServer }) {
+  const { peraSignPaymentTransaction } = await import("./pera.js");
+  await syncPeraSessionForLogin(from);
+  return peraSignPaymentTransaction({
+    from,
+    to,
+    amountMicroAlgos,
+    noteStr,
+    algodServer,
+  });
 }
 
 /**
- * Build + sign a payment txn with the active use-wallet provider.
+ * Build + sign a payment txn with the active wallet (Pera standalone or use-wallet).
  * @returns {{ signedBytes: Uint8Array, txId: string }}
  */
 export async function signPaymentTransaction({
@@ -72,8 +83,18 @@ export async function signPaymentTransaction({
   algodServer = defaultAlgodServer(),
 }) {
   const bridge = getWalletSigner();
-  const connected = bridge?.getActiveAddress?.();
 
+  if (isPeraWalletUser(bridge)) {
+    return signViaStandalonePera({
+      from,
+      to,
+      amountMicroAlgos,
+      noteStr,
+      algodServer,
+    });
+  }
+
+  const connected = bridge?.getActiveAddress?.();
   if (bridge?.signTransactions && connected) {
     try {
       return await signPaymentTransactionViaBridge({
@@ -89,9 +110,7 @@ export async function signPaymentTransaction({
     }
   }
 
-  const { peraSignPaymentTransaction, reconnectPera } = await import("./pera.js");
-  await reconnectPera().catch(() => {});
-  return peraSignPaymentTransaction({
+  return signViaStandalonePera({
     from,
     to,
     amountMicroAlgos,
@@ -165,6 +184,10 @@ export async function signAndSendPayment({
     noteStr,
     algodServer: server,
   });
+
+  if (!(signedBytes instanceof Uint8Array) || signedBytes.length < 10) {
+    throw new Error("Wallet returned invalid signed transaction bytes.");
+  }
 
   const algod = new algosdk.Algodv2("", server, "");
   const submitted = await algod.sendRawTransaction(signedBytes).do();
