@@ -13,8 +13,6 @@ import ExecutionPanelTab from "../components/workflow/controls/ExecutionPanelTab
 import { WORKFLOW_OPEN_EXECUTION_PANEL, openWorkflowExecutionPanel } from "../utils/workflowUi.js";
 import { useWorkflowPersistence } from "../hooks/useWorkflowPersistence.js";
 import { useWorkflowExecutor } from "../hooks/useWorkflowExecutor.js";
-import { useAuth } from "../context/AuthContext.jsx";
-import { getBurnerBalance, getDefaultAlgodServer } from "../wallet/burner.js";
 
 function BuilderInner() {
   const { workflowId: paramId } = useParams();
@@ -35,10 +33,8 @@ function BuilderInner() {
   const { executionState } = useNodeExecution();
   const [panelOpen, setPanelOpen] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
-  const [burnerBal, setBurnerBal] = useState(null);
+  const [walletBal, setWalletBal] = useState(null);
   const [loading, setLoading] = useState(true);
-  const { burnerReady } = useAuth();
-  const algodServer = getDefaultAlgodServer();
 
   const effectiveId = workflowId || paramId;
   const { isRunning, currentRun, liveLogs, runWorkflow } = useWorkflowExecutor(effectiveId);
@@ -84,19 +80,16 @@ function BuilderInner() {
   }, [paramId, loadWorkflow, navigate]);
 
   useEffect(() => {
-    if (!burnerReady) {
-      setBurnerBal(null);
-      return;
-    }
     const refresh = () =>
-      getBurnerBalance(algodServer)
-        .then((m) => setBurnerBal(m / 1e6))
-        .catch(() => setBurnerBal(null));
+      api
+        .get("/api/user/algo-balance")
+        .then(({ data }) => setWalletBal(data?.balanceAlgo ?? null))
+        .catch(() => setWalletBal(null));
     refresh();
     const onBal = () => refresh();
     window.addEventListener("walletBalanceUpdate", onBal);
     return () => window.removeEventListener("walletBalanceUpdate", onBal);
-  }, [burnerReady, algodServer]);
+  }, []);
 
   const selectedNode = nodes.find((n) => n.id === selectedId);
 
@@ -188,7 +181,7 @@ function BuilderInner() {
         isSaving={isSaving}
         isRunning={isRunning}
         lastSavedAt={lastSavedAt}
-        walletBalance={burnerBal}
+        walletBalance={walletBal}
       />
 
       <div className="flex gap-3 items-start flex-1 min-h-0">

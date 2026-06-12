@@ -1,7 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { api, setAuthToken } from "../api/client.js";
 import { isTokenExpired, parseJwtPayload } from "../utils/jwt.js";
-import { ensureBurnerWallet, clearActiveBurnerUser } from "../wallet/burner.js";
 import { reconnectPera } from "../wallet/pera.js";
 import { signLoginChallenge } from "../wallet/signLoginChallenge.js";
 import { Buffer } from "buffer";
@@ -31,7 +30,6 @@ export function AuthProvider({ children }) {
   const [token, setToken] = useState(() => localStorage.getItem(STORAGE_KEY));
   const [user, setUser] = useState(() => userFromToken(localStorage.getItem(STORAGE_KEY)));
   const [loading, setLoading] = useState(true);
-  const [burnerReady, setBurnerReady] = useState(false);
 
   useEffect(() => {
     reconnectPera().catch((err) => console.warn("Pera auto-reconnect failed:", err));
@@ -42,8 +40,6 @@ export function AuthProvider({ children }) {
     setToken(null);
     setUser(null);
     setAuthToken(null);
-    clearActiveBurnerUser();
-    setBurnerReady(false);
   }, []);
 
   useEffect(() => {
@@ -64,11 +60,8 @@ export function AuthProvider({ children }) {
         const derived = userFromToken(token);
         if (derived) {
           setUser(derived);
-          setBurnerReady(false);
-          let profileOk = false;
           try {
             const { data } = await api.get("/api/profile/summary");
-            profileOk = true;
             if (data?.profile) {
               setUser({
                 id: data.profile.id,
@@ -86,16 +79,6 @@ export function AuthProvider({ children }) {
               return;
             }
             console.warn("Failed to refetch latest profile data:", err.message);
-            profileOk = true;
-          }
-          if (profileOk) {
-            try {
-              await ensureBurnerWallet(derived.id);
-            } catch (err) {
-              console.warn("Burner init error:", err);
-            } finally {
-              setBurnerReady(true);
-            }
           }
         } else {
           clearSession();
@@ -103,8 +86,6 @@ export function AuthProvider({ children }) {
       } else {
         setAuthToken(null);
         setUser(null);
-        clearActiveBurnerUser();
-        setBurnerReady(false);
       }
       setLoading(false);
     }
@@ -118,14 +99,6 @@ export function AuthProvider({ children }) {
     setAuthToken(incoming);
     setToken(incoming);
     setUser(derived);
-    setBurnerReady(false);
-    try {
-      await ensureBurnerWallet(derived.id);
-    } catch (err) {
-      console.warn("Burner init after login:", err);
-    } finally {
-      setBurnerReady(true);
-    }
     return derived;
   }, []);
 
@@ -224,10 +197,9 @@ export function AuthProvider({ children }) {
       updateProfile,
       becomeCreator,
       logout,
-      burnerReady,
       isAuthenticated: Boolean(token && user),
     }),
-    [token, user, loading, burnerReady, login, register, linkWallet, updateProfile, becomeCreator, logout]
+    [token, user, loading, login, register, linkWallet, updateProfile, becomeCreator, logout]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

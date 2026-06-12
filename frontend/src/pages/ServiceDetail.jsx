@@ -18,7 +18,6 @@ import {
 import { signAndSendPayment } from "../wallet/signPayment.js";
 import { chargeForTokens, wordsToApproxTokens } from "../utils/tokenPricing.js";
 import { useTokenEstimate } from "../hooks/useTokenEstimate.js";
-import { getBurnerWallet } from "../wallet/burner.js";
 import { StarRating } from "../components/MarketplaceCard.jsx";
 import { testnetTxUrl } from "../utils/explorer.js";
 
@@ -28,7 +27,7 @@ function sleep(ms) {
 
 export default function ServiceDetail() {
   const { id } = useParams();
-  const { user, logout, burnerReady, isAuthenticated } = useAuth();
+  const { user, logout, isAuthenticated } = useAuth();
   const { runWithWallet } = useWalletAction();
   const [service, setService] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -259,19 +258,17 @@ curl -sS "${apiBase}/api/use" \\
 
     try {
       if (service.x402Enabled) {
-        if (!burnerReady) {
-          throw new Error("Burner wallet is still loading. Wait a moment and try again.");
-        }
         setQuotedCharge(Number(service.minimumChargeAlgo) || null);
         setPayStage("sign");
-        const burnerWallet = getBurnerWallet();
+        toast.loading("Approve payment in Pera Wallet…", { id: "service-pay" });
         const { aiResponse, txId, receipt } = await callProxyX402Use({
           apiKey,
           serviceId: service._id,
           body: { prompt: prompt.trim() },
           algodServer,
-          burnerWallet,
+          fromWallet: sessionWallet,
         });
+        toast.dismiss("service-pay");
         setLastTxId(txId);
         setLastReceipt(receipt || null);
         setPayStage("done");
@@ -302,43 +299,16 @@ curl -sS "${apiBase}/api/use" \\
 
       setQuotedCharge(charge);
       setPayStage("sign");
+      toast.loading("Approve payment in Pera Wallet…", { id: "service-pay" });
 
-      if (!burnerReady) {
-        throw new Error("Burner wallet is still loading. Wait a moment and try again.");
-      }
-      const burnerWallet = getBurnerWallet();
-      const algosdk = (await import("algosdk")).default;
-      const algod = new algosdk.Algodv2("", algodServer.trim(), "");
-      let burnerBalanceInfo;
-      try {
-        burnerBalanceInfo = await algod.accountInformation(burnerWallet.addr).do();
-      } catch (e) {
-        throw new Error("Burner wallet has zero balance. Please click 'Manage' > 'Fund' in the top bar.");
-      }
-
-      const params = await algod.getTransactionParams().do();
-      const txFee = Number(params.fee) || 1000;
-      
-      if (Number(burnerBalanceInfo.amount) < micro + txFee) {
-        throw new Error(`Burner wallet does not have enough funds for this request. Required: ${(micro + txFee) / 1000000} ALGO. Please click 'Manage' > 'Fund' in the top bar.`);
-      }
-
-      const note = new TextEncoder().encode(quote.paymentRef);
-      const txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-        sender: burnerWallet.addr,
-        receiver: to,
-        amount: Math.round(micro),
-        note,
-        suggestedParams: params,
+      const { txId } = await signAndSendPayment({
+        from: sessionWallet,
+        to,
+        amountMicroAlgos: Math.round(micro),
+        noteStr: quote.paymentRef,
+        algodServer,
       });
-
-      const signedTxn = txn.signTxn(burnerWallet.sk);
-      const submitted = await algod.sendRawTransaction(signedTxn).do();
-      const txId = submitted?.txid ?? submitted?.txId;
-      if (!txId) {
-        throw new Error("Network did not return a transaction id after submit.");
-      }
-      await algosdk.waitForConfirmation(algod, txId, 4);
+      toast.dismiss("service-pay");
 
       setLastTxId(txId);
       setPayStage("confirming_chain");
@@ -362,6 +332,7 @@ curl -sS "${apiBase}/api/use" \\
       setPayStage("done");
       toast.success("AI response ready");
     } catch (e) {
+      toast.dismiss("service-pay");
       const msg = e?.response?.data?.error || e?.response?.data?.detail || e?.message || "Request failed";
       setPayError(msg);
       setPayStage("error");
@@ -496,7 +467,7 @@ curl -sS "${apiBase}/api/use" \\
                   className="mt-1"
                 />
                 <span>
-                  I understand each call charges from my burner wallet
+                  I understand each call charges my Pera wallet
                   {x402Enabled && Number.isFinite(minC) ? ` (min ${minC.toFixed(6)} ALGO)` : ""}.
                 </span>
               </label>
