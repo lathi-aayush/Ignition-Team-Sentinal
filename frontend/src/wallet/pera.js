@@ -1,22 +1,10 @@
-// Pera may return accounts as plain strings OR { address: "..." } depending on version / web.
-// AlgSDK requires real Algorand address strings — otherwise you get "Address must not be null or undefined".
 import { PeraWalletConnect } from "@perawallet/connect";
+import { normalizeAccountAddress } from "./addressUtils.js";
+
+export { normalizeAccountAddress, addressesEqual } from "./addressUtils.js";
 
 const peraWallet = new PeraWalletConnect({ chainId: 416002 });
 let _connectedAddress = null;
-
-export function normalizeAccountAddress(raw) {
-  if (raw == null) return null;
-  if (typeof raw === "string") {
-    const s = raw.trim();
-    return s.length ? s : null;
-  }
-  if (typeof raw === "object" && raw !== null) {
-    const a = raw.address ?? raw.addr ?? raw.publicAddress;
-    if (typeof a === "string" && a.trim().length) return a.trim();
-  }
-  return null;
-}
 
 export async function reconnectPera() {
   try {
@@ -80,22 +68,6 @@ export async function connectPera() {
   }
 }
 
-/** Compare two Algorand addresses (handles casing / encoding differences). */
-export async function addressesEqual(a, b) {
-  const A = normalizeAccountAddress(a);
-  const B = normalizeAccountAddress(b);
-  if (!A || !B) return false;
-  const algosdk = (await import("algosdk")).default;
-  try {
-    return (
-      algosdk.encodeAddress(algosdk.decodeAddress(A)) ===
-      algosdk.encodeAddress(algosdk.decodeAddress(B))
-    );
-  } catch {
-    return A === B;
-  }
-}
-
 export async function disconnectPera() {
   try {
     await peraWallet.disconnect();
@@ -105,14 +77,6 @@ export async function disconnectPera() {
     _connectedAddress = null;
   }
 }
-
-export {
-  signAndSendPayment,
-  signAndSendContractPurchase,
-  ensureConnectedWallet,
-  buildX402PaymentHeader,
-  buildXPaymentHeaderFromSignedBytes,
-} from "./signPayment.js";
 
 /**
  * Prompts the Pera Wallet user to sign cryptographic challenge data

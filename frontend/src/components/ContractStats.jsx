@@ -5,7 +5,7 @@ import { api } from "../api/client.js";
 import {
   signAndSendContractPurchase,
   ensureConnectedWallet,
-} from "../wallet/pera.js";
+} from "../wallet/signPayment.js";
 
 function useInView(threshold = 0.15) {
   const ref = useRef(null);

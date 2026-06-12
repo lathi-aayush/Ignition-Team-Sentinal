@@ -14,8 +14,8 @@ import {
   connectPera,
   normalizeAccountAddress,
   reconnectPera,
-  signAndSendPayment,
 } from "../wallet/pera.js";
+import { signAndSendPayment } from "../wallet/signPayment.js";
 import { chargeForTokens, wordsToApproxTokens } from "../utils/tokenPricing.js";
 import { useTokenEstimate } from "../hooks/useTokenEstimate.js";
 import { getBurnerWallet } from "../wallet/burner.js";

@@ -13,7 +13,6 @@ function manualChunks(id) {
   // Keep with the lazy Studio Analytics route (avoids broken split + smaller initial vendor).
   if (id.includes(nm("recharts")) || id.includes("/d3-") || id.includes("/d3/")) return;
 
-  if (id.includes(nm("algosdk"))) return "algosdk";
   if (id.includes(nm("@perawallet"))) return "pera";
 
   if (
@@ -74,6 +73,7 @@ export default defineConfig(({ mode }) => {
     },
     optimizeDeps: {
       include: [
+        "algosdk",
         "recharts",
         "@txnlab/use-wallet-react",
         "@txnlab/use-wallet",

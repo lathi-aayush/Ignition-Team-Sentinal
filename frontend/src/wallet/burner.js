@@ -1,4 +1,4 @@
-import { signAndSendPayment } from "./pera.js";
+import { signAndSendPayment } from "./signPayment.js";
 import { api } from "../api/client.js";
 
 /** Lazy-load algosdk (~370 kB) — only when burner wallet is used. */

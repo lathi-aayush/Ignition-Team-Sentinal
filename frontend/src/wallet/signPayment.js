@@ -1,5 +1,5 @@
 import { getWalletSigner } from "./walletSignerBridge.js";
-import { normalizeAccountAddress, addressesEqual } from "./pera.js";
+import { normalizeAccountAddress, addressesEqual } from "./addressUtils.js";
 import { getDefaultAlgodServer } from "../utils/algodConfig.js";
 
 function defaultAlgodServer() {
