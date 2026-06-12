@@ -103,3 +103,60 @@ export async function signData(dataBytes, address) {
   return await peraWallet.signData([{ data: dataBytes, message: "Sign in to SentinelAI" }], signer);
 }
 
+/**
+ * Sign a payment txn via standalone Pera (for users who logged in without use-wallet active).
+ * @returns {{ signedBytes: Uint8Array, txId: string }}
+ */
+export async function peraSignPaymentTransaction({
+  from,
+  to,
+  amountMicroAlgos,
+  noteStr,
+  algodServer,
+}) {
+  if (!peraWallet.isConnected) {
+    const reconnected = await reconnectPera();
+    if (!reconnected) await connectPera();
+  }
+  if (!peraWallet.isConnected) {
+    throw new Error("Connect Pera Wallet to send ALGO.");
+  }
+
+  const algosdk = (await import("algosdk")).default;
+  const server = String(algodServer || "").trim().replace(/\/$/, "");
+  const sender = normalizeAccountAddress(from) ?? normalizeAccountAddress(_connectedAddress);
+  const receiver = normalizeAccountAddress(to);
+
+  if (!sender || !algosdk.isValidAddress(sender)) {
+    throw new Error("Invalid sender address.");
+  }
+  if (!receiver || !algosdk.isValidAddress(receiver)) {
+    throw new Error("Invalid receiver address.");
+  }
+
+  const amt = Math.round(Number(amountMicroAlgos));
+  if (!Number.isFinite(amt) || amt <= 0) {
+    throw new Error("Invalid payment amount.");
+  }
+
+  const algod = new algosdk.Algodv2("", server, "");
+  const suggestedParams = await algod.getTransactionParams().do();
+  const note = noteStr ? new TextEncoder().encode(noteStr) : undefined;
+
+  const txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+    sender,
+    receiver,
+    amount: amt,
+    note,
+    suggestedParams,
+  });
+
+  const signedGroups = await peraWallet.signTransaction([[{ txn }]]);
+  const signedBytes = signedGroups?.[0]?.[0] ?? signedGroups?.[0];
+  if (!signedBytes) {
+    throw new Error("Pera Wallet did not return signed transaction bytes.");
+  }
+
+  return { signedBytes, txId: txn.txID() };
+}
+

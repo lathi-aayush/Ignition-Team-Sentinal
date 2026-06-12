@@ -38,7 +38,7 @@ export default function UserLiveWalletBar({ walletAddress, variant = "compact" }
   const [algo, setAlgo] = useState(null);
   const [burnerAlgo, setBurnerAlgo] = useState(null);
   const [burnerAddr, setBurnerAddr] = useState(null);
-  const [fundAmount, setFundAmount] = useState("0.");
+  const [fundAmount, setFundAmount] = useState("1");
   const [isFunding, setIsFunding] = useState(false);
   const [isRefunding, setIsRefunding] = useState(false);
   const [showManage, setShowManage] = useState(false);
@@ -99,19 +99,21 @@ export default function UserLiveWalletBar({ walletAddress, variant = "compact" }
   }, [showManage]);
 
   const handleFund = async () => {
-    if (!walletAddress) return toast.error("Connect main wallet first");
+    if (!walletAddress) return toast.error("Connect and link your wallet first");
+    if (!burnerReady) return toast.error("Burner wallet is still loading — wait a moment and retry");
     const amountFloat = parseFloat(fundAmount);
-    if (isNaN(amountFloat) || amountFloat <= 0) return toast.error("Invalid amount");
+    if (isNaN(amountFloat) || amountFloat <= 0) return toast.error("Enter an amount greater than 0 ALGO");
     setIsFunding(true);
     try {
+      toast.loading("Approve the transfer in your wallet…", { id: "fund-burner" });
       const micro = Math.round(amountFloat * 1_000_000);
       await fundBurnerWallet(walletAddress, micro, algodServer);
-      toast.success("Burner wallet funded");
+      toast.success("Burner wallet funded", { id: "fund-burner" });
       const bBal = await getBurnerBalance(algodServer);
       setBurnerAlgo(bBal);
       setShowManage(false);
     } catch (e) {
-      toast.error(e?.message || "Failed to fund burner");
+      toast.error(e?.message || "Failed to fund burner", { id: "fund-burner" });
     } finally { setIsFunding(false); }
   };
 

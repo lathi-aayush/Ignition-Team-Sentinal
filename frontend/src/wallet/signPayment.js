@@ -54,6 +54,12 @@ async function signTxnGroup(txns) {
   return signed;
 }
 
+function isPeraWalletContext(bridge) {
+  const id = String(bridge?.getActiveWalletId?.() || "").toLowerCase();
+  const name = String(bridge?.getActiveWalletName?.() || "").toLowerCase();
+  return id.includes("pera") || name.includes("pera");
+}
+
 /**
  * Build + sign a payment txn with the active use-wallet provider.
  * @returns {{ signedBytes: Uint8Array, txId: string }}
@@ -65,8 +71,44 @@ export async function signPaymentTransaction({
   noteStr,
   algodServer = defaultAlgodServer(),
 }) {
+  const bridge = getWalletSigner();
+  const connected = bridge?.getActiveAddress?.();
+
+  if (bridge?.signTransactions && connected) {
+    try {
+      return await signPaymentTransactionViaBridge({
+        from,
+        to,
+        amountMicroAlgos,
+        noteStr,
+        algodServer,
+        connected,
+      });
+    } catch (err) {
+      if (!isPeraWalletContext(bridge)) throw err;
+    }
+  }
+
+  const { peraSignPaymentTransaction, reconnectPera } = await import("./pera.js");
+  await reconnectPera().catch(() => {});
+  return peraSignPaymentTransaction({
+    from,
+    to,
+    amountMicroAlgos,
+    noteStr,
+    algodServer,
+  });
+}
+
+async function signPaymentTransactionViaBridge({
+  from,
+  to,
+  amountMicroAlgos,
+  noteStr,
+  algodServer,
+  connected,
+}) {
   const algosdk = await getAlgosdk();
-  const connected = await ensureConnectedWallet();
   const sender = normalizeAccountAddress(from) || connected;
   const receiver = normalizeAccountAddress(to);
 

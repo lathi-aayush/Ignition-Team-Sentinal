@@ -70,7 +70,12 @@ export default function ProfileDropdown() {
     setLinking(true);
     try {
       toast.loading("Connecting wallet...", { id: "pera-link-dropdown" });
-      const address = await ensureConnectedWallet();
+      const bridge = getWalletSigner();
+      const walletId = String(bridge?.getActiveWalletId?.() || "").toLowerCase();
+      setLoginWalletId(walletId);
+      const address = walletId.includes("pera")
+        ? await connectPera()
+        : await ensureConnectedWallet();
       toast.loading("Linking address to your profile...", { id: "pera-link-dropdown" });
       await linkWallet(address);
       toast.success("Wallet linked successfully!", { id: "pera-link-dropdown" });

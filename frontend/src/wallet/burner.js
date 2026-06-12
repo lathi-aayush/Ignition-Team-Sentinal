@@ -1,4 +1,6 @@
-import { signAndSendPayment } from "./signPayment.js";
+import { addressesEqual, normalizeAccountAddress } from "./addressUtils.js";
+import { signAndSendPayment, ensureConnectedWallet } from "./signPayment.js";
+import { reconnectPera } from "./pera.js";
 import { api } from "../api/client.js";
 
 /** Lazy-load algosdk (~370 kB) — only when burner wallet is used. */
@@ -220,10 +222,28 @@ export async function getBurnerBalance(algodServer = getDefaultAlgodServer(), us
   }
 }
 
-export async function fundBurnerWallet(peraAddress, amountMicroAlgos, algodServer = getDefaultAlgodServer()) {
+export async function fundBurnerWallet(linkedAddress, amountMicroAlgos, algodServer = getDefaultAlgodServer()) {
   const burner = getBurnerWallet();
+
+  let from = normalizeAccountAddress(linkedAddress);
+  try {
+    from = normalizeAccountAddress(await ensureConnectedWallet()) || from;
+  } catch {
+    from = normalizeAccountAddress(await reconnectPera()) || from;
+  }
+
+  if (!from) {
+    throw new Error("Connect your wallet to fund the burner.");
+  }
+
+  if (linkedAddress && !(await addressesEqual(linkedAddress, from))) {
+    throw new Error(
+      `Connected wallet (${from.slice(0, 6)}…${from.slice(-4)}) must match your linked profile wallet. Reconnect the same account.`
+    );
+  }
+
   const { txId } = await signAndSendPayment({
-    from: peraAddress,
+    from,
     to: burner.addr,
     amountMicroAlgos,
     noteStr: "Fund Burner Wallet",
