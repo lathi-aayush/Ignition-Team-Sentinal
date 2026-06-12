@@ -5,6 +5,9 @@ import toast from "react-hot-toast";
 import axios from "axios";
 import { useAuth } from "../context/AuthContext.jsx";
 import { ensureConnectedWallet } from "../wallet/signPayment.js";
+import { connectPera } from "../wallet/pera.js";
+import { getWalletSigner } from "../wallet/walletSignerBridge.js";
+import { setLoginWalletId } from "../wallet/signLoginChallenge.js";
 import { api } from "../api/client.js";
 
 export function shortenWalletAddress(addr) {

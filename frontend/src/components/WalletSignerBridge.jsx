@@ -21,8 +21,10 @@ export default function WalletSignerBridge() {
   useEffect(() => {
     if (!isReady) return;
 
+    const activeWalletId = String(activeWallet?.id || activeWallet?.walletKey || "").toLowerCase();
+
     const signMessage =
-      typeof walletSignData === "function"
+      typeof walletSignData === "function" && !activeWalletId.includes("pera")
         ? async (messageBytes, address) => {
             const signer = normalizeAccountAddress(address) || activeAddress;
             if (!signer) {
@@ -38,6 +40,7 @@ export default function WalletSignerBridge() {
     registerWalletSigner({
       signTransactions,
       getActiveAddress: () => activeAddress,
+      getActiveWalletId: () => activeWallet?.id || activeWallet?.walletKey || "",
       getActiveWalletName: () => activeWallet?.metadata?.name || activeWallet?.id || "Wallet",
       openConnectModal,
       signMessage,

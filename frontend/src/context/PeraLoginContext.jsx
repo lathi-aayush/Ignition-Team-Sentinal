@@ -12,7 +12,8 @@ import toast from "react-hot-toast";
 import { useAuth } from "./AuthContext.jsx";
 import PeraRegistrationModal from "../components/PeraRegistrationModal.jsx";
 import WalletConnectModal from "../components/WalletConnectModal.jsx";
-import { syncPeraSessionForLogin } from "../wallet/signLoginChallenge.js";
+import { syncPeraSessionForLogin, setLoginWalletId } from "../wallet/signLoginChallenge.js";
+import { connectPera } from "../wallet/pera.js";
 
 const WalletLoginContext = createContext(null);
 
@@ -105,6 +106,16 @@ export function PeraLoginProvider({ children }) {
 
       try {
         toast.loading(`Connecting ${walletName}...`, { id: "wallet-login" });
+        const walletKey = String(wallet.id || wallet.walletKey || wallet.metadata?.name || "").toLowerCase();
+
+        if (walletKey.includes("pera")) {
+          setLoginWalletId(wallet.id || wallet.walletKey || "pera");
+          if (typeof wallet.setActive === "function") wallet.setActive();
+          const addr = await connectPera();
+          return await completeLogin(addr, { role, afterLogin, shouldNavigate });
+        }
+
+        setLoginWalletId(wallet.id || wallet.walletKey || "");
         if (typeof wallet.setActive === "function") wallet.setActive();
         const accounts = await wallet.connect();
         const addr =
@@ -115,12 +126,7 @@ export function PeraLoginProvider({ children }) {
           throw new Error("Could not read wallet address after connect.");
         }
 
-        const walletId = String(wallet.id || wallet.metadata?.name || "").toLowerCase();
-        if (walletId.includes("pera")) {
-          await syncPeraSessionForLogin(addr);
-        } else {
-          await new Promise((r) => setTimeout(r, 150));
-        }
+        await new Promise((r) => setTimeout(r, 150));
 
         return await completeLogin(addr, { role, afterLogin, shouldNavigate });
       } catch (e) {
@@ -178,9 +184,11 @@ export function PeraLoginProvider({ children }) {
       if (activeWallet?.isConnected && activeWallet.activeAccount?.address) {
         setBusy(true);
         try {
-          const addr = activeWallet.activeAccount.address;
-          if (String(activeWallet.id || "").toLowerCase().includes("pera")) {
-            await syncPeraSessionForLogin(addr);
+          const walletKey = String(activeWallet.id || activeWallet.walletKey || "").toLowerCase();
+          setLoginWalletId(activeWallet.id || activeWallet.walletKey || "");
+          let addr = activeWallet.activeAccount.address;
+          if (walletKey.includes("pera")) {
+            addr = await syncPeraSessionForLogin(addr);
           }
           return await completeLogin(addr, {
             role,

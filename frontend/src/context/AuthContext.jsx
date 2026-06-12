@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import { api, setAuthToken } from "../api/client.js";
 import { isTokenExpired, parseJwtPayload } from "../utils/jwt.js";
 import { ensureBurnerWallet, clearActiveBurnerUser } from "../wallet/burner.js";
+import { reconnectPera } from "../wallet/pera.js";
 import { signLoginChallenge } from "../wallet/signLoginChallenge.js";
 import { Buffer } from "buffer";
 
