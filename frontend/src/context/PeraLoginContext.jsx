@@ -12,6 +12,7 @@ import toast from "react-hot-toast";
 import { useAuth } from "./AuthContext.jsx";
 import PeraRegistrationModal from "../components/PeraRegistrationModal.jsx";
 import WalletConnectModal from "../components/WalletConnectModal.jsx";
+import { syncPeraSessionForLogin } from "../wallet/signLoginChallenge.js";
 
 const WalletLoginContext = createContext(null);
 
@@ -114,8 +115,12 @@ export function PeraLoginProvider({ children }) {
           throw new Error("Could not read wallet address after connect.");
         }
 
-        // Brief pause so WalletSignerBridge registers signData from the active wallet
-        await new Promise((r) => setTimeout(r, 150));
+        const walletId = String(wallet.id || wallet.metadata?.name || "").toLowerCase();
+        if (walletId.includes("pera")) {
+          await syncPeraSessionForLogin(addr);
+        } else {
+          await new Promise((r) => setTimeout(r, 150));
+        }
 
         return await completeLogin(addr, { role, afterLogin, shouldNavigate });
       } catch (e) {
@@ -173,7 +178,11 @@ export function PeraLoginProvider({ children }) {
       if (activeWallet?.isConnected && activeWallet.activeAccount?.address) {
         setBusy(true);
         try {
-          return await completeLogin(activeWallet.activeAccount.address, {
+          const addr = activeWallet.activeAccount.address;
+          if (String(activeWallet.id || "").toLowerCase().includes("pera")) {
+            await syncPeraSessionForLogin(addr);
+          }
+          return await completeLogin(addr, {
             role,
             afterLogin,
             shouldNavigate,
